@@ -29,20 +29,38 @@ void Player::update(float deltaTime, MapManager& mapManager) {
     int cellY = (int)(pos.y) / 64;
     Level* cur = mapManager.getCurrentLevel();
 
-    if (cellX >= 0 && cellX < cur->cols && cellY >= 0 && cellY < cur->rows) {
-        // Bloqueo de muros y puertas cerradas
-        if (cur->grid[cellY][cellX].type == 1 || cur->grid[cellY][cellX].type == 2) {
-            pos = oldPos;
-            cellX = (int)(pos.x) / 64;
-            cellY = (int)(pos.y) / 64;
+    int oldCellX = (int)(oldPos.x) / 64;
+    int oldCellY = (int)(oldPos.y) / 64;
+
+    // 🌟 PROTECCIÓN CRÍTICA: Validar que los índices estén estrictamente dentro del mapa antes de leer la matriz
+    if (cellX >= 0 && cellX < cur->cols && cellY >= 0 && cellY < cur->rows &&
+        oldCellX >= 0 && oldCellX < cur->cols && oldCellY >= 0 && oldCellY < cur->rows) 
+    {
+        float targetFloorHeight = cur->grid[cellY][cellX].floorHeight;
+        float currentFloorHeight = cur->grid[oldCellY][oldCellX].floorHeight;
+
+        // Si choca con muros, puertas cerradas o escalones muy altos
+        if (cur->grid[cellY][cellX].type == 1 || 
+            cur->grid[cellY][cellX].type == 2 || 
+            (targetFloorHeight - currentFloorHeight) > 0.35f) 
+        {
+            pos = oldPos; // Revertir movimiento
+            cellX = oldCellX;
+            cellY = oldCellY;
+            targetFloorHeight = currentFloorHeight;
         }
 
-        // Sistema de altura fluido
-        float currentGroundHeight = cur->grid[cellY][cellX].floorHeight;
-        float targetCameraZ = currentGroundHeight * 220.0f;
-        cameraZ += (targetCameraZ - cameraZ) * 8.0f * deltaTime;
+        // Suavizado de la cámara
+        float targetCameraZ = targetFloorHeight * 220.0f;
+        cameraZ += (targetCameraZ - cameraZ) * 12.0f * deltaTime;
+    } else {
+        // Si por alguna razón el jugador se sale del mapa, lo regresamos a una zona segura
+        pos = oldPos;
+        cellX = oldCellX;
+        cellY = oldCellY;
     }
 
+    // Comprobación de salida segura
     if (mapManager.isExit(cellX, cellY)) {
         mapManager.nextLevel();
         pos = mapManager.getCurrentLevel()->spawnPoint;

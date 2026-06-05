@@ -1,60 +1,42 @@
 #include "Map.hpp"
+#include "Level.hpp" // Asegúrate de que use el nombre correcto de tu cabecera de niveles
+#include <iostream>
 
 MapManager::MapManager() {
     currentLevelIndex = 0;
-    showFullMap = false; // Empezar en modo 3D por defecto
+    showFullMap = false;
     elevatorHeight = 0.0f;
     elevatorDirection = 1;
     elevatorSpeed = 0.6f;
 
-    // NIVEL 1: Mapa inicial con una PUERTA (tipo 2) para validar que funcione
-    Level lvl1;
-    lvl1.name = "Hangar de Inicio";
-    lvl1.rows = 6; lvl1.cols = 6;
-    lvl1.spawnPoint = sf::Vector2f(96.0f, 96.0f);
-    lvl1.grid.resize(6, std::vector<Tile>(6, {0, 0.0f, 1.0f, false}));
-    
-    for(int i = 0; i < 6; i++) {
-        lvl1.grid[0][i].type = 1; lvl1.grid[5][i].type = 1;
-        lvl1.grid[i][0].type = 1; lvl1.grid[i][6 - 1].type = 1;
+    // Cargar los niveles desde el archivo separado
+    levels = getBuiltInLevels();
+
+    // IMPRESIÓN DE SEGURIDAD: Esto te dirá en la terminal de MSYS2 si los mapas se cargaron con éxito
+    std::cout << "--- CARGANDO MOTOR ---" << std::endl;
+    std::cout << "Niveles cargados exitosamente: " << levels.size() << std::endl;
+    if (!levels.empty()) {
+        std::cout << "Nivel inicial activo: " << levels[0].name << std::endl;
+    } else {
+        std::cout << "¡ALERTA! El vector de niveles está VACÍO." << std::endl;
     }
-    // Colocamos una puerta intermedia y la salida detrás
-    lvl1.grid[3][2] = {2, 0.0f, 1.0f, false}; // Puerta (Presiona Espacio frente a ella)
-    lvl1.grid[4][4] = {9, 0.0f, 1.0f, false}; // Salida al Nivel 2
-    levels.push_back(lvl1);
-
-    // NIVEL 2: El sector tridimensional con escaleras y el elevador móvil
-    Level lvl2;
-    lvl2.name = "Sector de Elevadores";
-    lvl2.rows = 7; lvl2.cols = 7;
-    lvl2.spawnPoint = sf::Vector2f(96.0f, 96.0f);
-    lvl2.grid.resize(7, std::vector<Tile>(7, {0, 0.0f, 1.0f, false}));
-    
-    for(int i = 0; i < 7; i++) {
-        lvl2.grid[0][i].type = 1; lvl2.grid[6][i].type = 1;
-        lvl2.grid[i][0].type = 1; lvl2.grid[i][6].type = 1;
-    }
-
-    // Escaleras estáticas
-    lvl2.grid[2][2] = {0, 0.25f, 1.25f, false}; 
-    lvl2.grid[2][3] = {0, 0.50f, 1.50f, false}; 
-    lvl2.grid[2][4] = {0, 0.75f, 1.75f, false}; 
-
-    // Elevador mecánico dinámico
-    lvl2.grid[3][4] = {0, 0.0f, 1.75f, true}; 
-
-    // Plataforma alta final y meta
-    lvl2.grid[4][4] = {0, 1.0f, 2.0f, false}; 
-    lvl2.grid[5][4] = {9, 0.0f, 1.0f, false}; 
-
-    levels.push_back(lvl2);
 }
 
-Level* MapManager::getCurrentLevel() { return &levels[currentLevelIndex]; }
+Level* MapManager::getCurrentLevel() { 
+    // Seguro anti-crash: si por alguna razón la lista está vacía, devuelve una referencia controlada
+    if (levels.empty()) {
+        static Level dummy = {"Dummy", 1, 1, {96.f, 96.f}, {{{0, 0.f, 1.f, false}}}};
+        return &dummy;
+    }
+    return &levels[currentLevelIndex]; 
+}
+
 int MapManager::getCurrentIndex() const { return currentLevelIndex; }
 
 void MapManager::nextLevel() { 
-    currentLevelIndex = (currentLevelIndex + 1) % levels.size(); 
+    if (!levels.empty()) {
+        currentLevelIndex = (currentLevelIndex + 1) % levels.size(); 
+    }
 }
 
 bool MapManager::isWall(int cellX, int cellY) {
@@ -78,14 +60,12 @@ bool MapManager::isDoor(int cellX, int cellY) {
 void MapManager::openDoor(int cellX, int cellY) {
     Level* cur = getCurrentLevel();
     if (cellX >= 0 && cellX < cur->cols && cellY >= 0 && cellY < cur->rows) {
-        if (cur->grid[cellY][cellX].type == 2) {
-            cur->grid[cellY][cellX].type = 0; // Se abre removiendo el obstáculo
-        }
+        if (cur->grid[cellY][cellX].type == 2) cur->grid[cellY][cellX].type = 0;
     }
 }
 
 void MapManager::updateElevator(float deltaTime) {
-    if (currentLevelIndex != 1) return;
+    if (currentLevelIndex != 1 || levels.empty()) return;
     Level* cur = getCurrentLevel();
 
     elevatorHeight += elevatorSpeed * elevatorDirection * deltaTime;
@@ -108,6 +88,7 @@ void MapManager::updateElevator(float deltaTime) {
 }
 
 void MapManager::drawFullMap(sf::RenderWindow& window) {
+    if (levels.empty()) return;
     Level* cur = getCurrentLevel();
     int tileSize = 32;
     float startX = (window.getSize().x - (cur->cols * tileSize)) / 2.0f;
@@ -118,9 +99,10 @@ void MapManager::drawFullMap(sf::RenderWindow& window) {
         for (int c = 0; c < cur->cols; c++) {
             Tile cell = cur->grid[r][c];
             if (cell.type == 1) tile.setFillColor(sf::Color(100, 100, 100));
-            else if (cell.type == 2) tile.setFillColor(sf::Color(150, 50, 150)); // Puertas violetas
-            else if (cell.isElevator) tile.setFillColor(sf::Color(230, 130, 40)); 
-            else if (cell.floorHeight > 0.0f) tile.setFillColor(sf::Color(40, 110, 190)); 
+            else if (cell.type == 2) tile.setFillColor(sf::Color(150, 50, 150));
+            else if (cell.type == 9) tile.setFillColor(sf::Color(35, 180, 70));
+            else if (cell.isElevator) tile.setFillColor(sf::Color(230, 130, 40));
+            else if (cell.floorHeight > 0.0f) tile.setFillColor(sf::Color(40, 110, 190));
             else tile.setFillColor(sf::Color(35, 35, 35));
 
             tile.setPosition(startX + c * tileSize, startY + r * tileSize);
