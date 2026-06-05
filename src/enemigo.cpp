@@ -1,4 +1,4 @@
-#include "enemigo.h"
+#include "Enemigo.h"
 
 DoomEnemy::DoomEnemy(std::string name, int hp, float range, float speed, float painChance)
     : name(name), hp(hp), attackRange(range), speed(speed), painChance(painChance), 
