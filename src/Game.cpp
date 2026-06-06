@@ -1,5 +1,5 @@
 #include <SFML/Graphics.hpp>
-#include <iostream>   // <-- ¡ESTA FALTA para corregir std::cerr!
+#include <iostream>
 #include <cmath>
 #include <vector>
 #include "Player.hpp"
@@ -16,58 +16,55 @@ private:
     Player player;
     sf::Clock gameClock;
 
-    void processEvents() {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
-            
-            // Abrir puertas con Espacio
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Space) {
-                int cellX = (int)(player.pos.x) / TILE_SIZE;
-                int cellY = (int)(player.pos.y) / TILE_SIZE;
-                
-                // Revisar bloques adyacentes frente al jugador
-                float lookX = player.pos.x + std::cos(player.angle) * 40.0f;
-                float lookY = player.pos.y + std::sin(player.angle) * 40.0f;
-                int targetX = (int)(lookX) / TILE_SIZE;
-                int targetY = (int)(lookY) / TILE_SIZE;
+void processEvents() {
+    sf::Event event;
+    while (window.pollEvent(event)) {
+        if (event.type == sf::Event::Closed)
+            window.close();
+        
+        if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Space) {
+            // Hacia dónde mira el jugador en una distancia corta de acción (45 unidades)
+            float lookX = player.pos.x + std::cos(player.angle) * 45.0f;
+            float lookY = player.pos.y + std::sin(player.angle) * 45.0f;
+            int targetX = (int)(lookX) / TILE_SIZE;
+            int targetY = (int)(lookY) / TILE_SIZE;
 
-                if (mapManager.isDoor(targetX, targetY)) {
-                    mapManager.openDoor(targetX, targetY);
-                }
+            if (mapManager.isDoor(targetX, targetY)) {
+                mapManager.openDoor(targetX, targetY);
             }
-
-            // Alternar mapa con Tab
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Tab) {
-                mapManager.showFullMap = !mapManager.showFullMap;
+            // 👇 NUEVO: Detectar si activa una pared secreta
+            else if (mapManager.isSecret(targetX, targetY)) {
+                mapManager.triggerSecret(targetX, targetY, player.angle);
             }
         }
-    }
 
-    void update(float deltaTime) {
-        player.update(deltaTime, mapManager);
-        mapManager.updateElevator(deltaTime);
+        if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Tab) {
+            mapManager.showFullMap = !mapManager.showFullMap;
+        }
     }
+}
 
-    void drawColumnSegment(int screenX, float distance, float rayAngle, float currentFloor, float targetFloor, sf::Color color) {
+void update(float deltaTime) {
+    player.update(deltaTime, mapManager);
+    mapManager.updateSecret(deltaTime); // <-- ¡Actualizar la animación física en cada frame!
+}
+
+    void drawColumn(int screenX, float distance, float rayAngle, sf::Color color) {
+        // Corrección del efecto ojo de pez clásico
         float correctedDistance = distance * std::cos(rayAngle - player.angle);
         if (correctedDistance < 1.0f) correctedDistance = 1.0f;
 
-        int baseWallHeight = (int)(SCREEN_HEIGHT * TILE_SIZE / correctedDistance);
-        int horizonOffset = (int)(player.cameraZ / correctedDistance);
+        // Proyección clásica de Wolfenstein 3D
+        int wallHeight = (int)(SCREEN_HEIGHT * TILE_SIZE / correctedDistance);
 
-        int finalTop = (SCREEN_HEIGHT / 2) - (baseWallHeight / 2) - horizonOffset + (int)((1.0f - targetFloor) * baseWallHeight);
-        int finalBottom = (SCREEN_HEIGHT / 2) + (baseWallHeight / 2) - horizonOffset + (int)((1.0f - currentFloor) * baseWallHeight);
+        int finalTop = (SCREEN_HEIGHT / 2) - (wallHeight / 2);
+        int finalBottom = (SCREEN_HEIGHT / 2) + (wallHeight / 2);
 
         if (finalTop < 0) finalTop = 0;
-        if (finalTop >= SCREEN_HEIGHT) finalTop = SCREEN_HEIGHT - 1;
-        if (finalBottom < 0) finalBottom = 0;
         if (finalBottom >= SCREEN_HEIGHT) finalBottom = SCREEN_HEIGHT - 1;
 
-        if (finalTop >= finalBottom) return;
-
-        float shadow = 1.0f - (distance / 700.0f);
+        // Sombreado realista por distancia
+        float shadow = 1.0f - (distance / 750.0f);
         if (shadow < 0.0f) shadow = 0.0f;
         color.r = (sf::Uint8)(color.r * shadow);
         color.g = (sf::Uint8)(color.g * shadow);
@@ -86,12 +83,12 @@ private:
         float startAngle = player.angle - fov / 2.0f;
         float angleStep = fov / (float)SCREEN_WIDTH;
 
-        // Dibujar Techo y Suelo base
+        // Render de cielo y suelo fijos
         sf::RectangleShape sky(sf::Vector2f((float)SCREEN_WIDTH, (float)SCREEN_HEIGHT / 2));
-        sky.setFillColor(sf::Color(25, 25, 25));
+        sky.setFillColor(sf::Color(40, 40, 40)); // Techo oscuro estilo mazmorra
         sf::RectangleShape floorRect(sf::Vector2f((float)SCREEN_WIDTH, (float)SCREEN_HEIGHT / 2));
         floorRect.setPosition(0, (float)SCREEN_HEIGHT / 2);
-        floorRect.setFillColor(sf::Color(45, 45, 45));
+        floorRect.setFillColor(sf::Color(70, 70, 70)); // Suelo cemento
         window.draw(sky);
         window.draw(floorRect);
 
@@ -102,41 +99,60 @@ private:
 
             float distance = 0.0f;
             float maxDistance = 800.0f;
-            float stepSize = 2.0f;
-            bool rayFinished = false;
-            float currentHighestEdge = 0.0f;
+            float stepSize = 1.5f; // Mayor precisión de rayo para Wolfenstein
+            bool hitWall = false;
+            sf::Color wallColor;
 
-            while (!rayFinished && distance < maxDistance) {
-                distance += stepSize;
-                float rayX = player.pos.x + cosRay * distance;
-                float rayY = player.pos.y + sinRay * distance;
+while (!hitWall && distance < maxDistance) {
+    distance += stepSize;
+    float rayX = player.pos.x + cosRay * distance;
+    float rayY = player.pos.y + sinRay * distance;
 
-                int testX = (int)(rayX) / TILE_SIZE;
-                int testY = (int)(rayY) / TILE_SIZE;
+    int testX = (int)(rayX) / TILE_SIZE;
+    int testY = (int)(rayY) / TILE_SIZE;
 
-                if (testX >= 0 && testX < curLevel->cols && testY >= 0 && testY < curLevel->rows) {
-                    Tile targetTile = curLevel->grid[testY][testX];
-                    
-                    if (targetTile.type == 1) { // Muro Gris
-                        drawColumnSegment(i, distance, rayAngle, currentHighestEdge, 1.5f, sf::Color(90, 95, 100));
-                        rayFinished = true;
-                    }
-                    else if (targetTile.type == 2) { // Puerta Violeta
-                        drawColumnSegment(i, distance, rayAngle, currentHighestEdge, 1.0f, sf::Color(130, 40, 130));
-                        rayFinished = true;
-                    }
-                    else if (targetTile.type == 9) { // Salida Verde
-                        drawColumnSegment(i, distance, rayAngle, currentHighestEdge, 1.0f, sf::Color(35, 180, 70));
-                        rayFinished = true;
-                    }
-                    else if (targetTile.floorHeight > currentHighestEdge) {
-                        sf::Color stepColor = targetTile.isElevator ? sf::Color(190, 110, 30) : sf::Color(50, 100, 160);
-                        drawColumnSegment(i, distance, rayAngle, currentHighestEdge, targetTile.floorHeight, stepColor);
-                        currentHighestEdge = targetTile.floorHeight;
-                    }
-                } else {
-                    rayFinished = true;
-                }
+    // 🌟 COMPROBACIÓN DINÁMICA DEL PUSHWALL
+    if (mapManager.activeSecret.isActive) {
+        // Calcular la posición exacta del bloque flotante en pixeles mundiales
+        float wallMinX = mapManager.activeSecret.originalX * 64 + mapManager.activeSecret.moveX;
+        float wallMaxX = wallMinX + 64;
+        float wallMinY = mapManager.activeSecret.originalY * 64 + mapManager.activeSecret.moveY;
+        float wallMaxY = wallMinY + 64;
+
+        // Si el rayo actual cae dentro del área en movimiento de la caja del secreto
+        if (rayX >= wallMinX && rayX < wallMaxX && rayY >= wallMinY && rayY < wallMaxY) {
+            wallColor = sf::Color(110, 60, 30); // Pintar de un color diferente (ej: Marrón madera secreta)
+            hitWall = true;
+            break;
+        }
+    }
+
+    if (testX >= 0 && testX < curLevel->cols && testY >= 0 && testY < curLevel->rows) {
+        int type = curLevel->grid[testY][testX].type;
+        
+        if (type == 1) {
+            wallColor = sf::Color(110, 115, 120);
+            hitWall = true;
+        }
+        else if (type == 2) {
+            wallColor = sf::Color(140, 45, 140);
+            hitWall = true;
+        }
+        else if (type == 3) { // Muro secreto en reposo antes de ser empujado
+            wallColor = sf::Color(100, 105, 110); // Color similar al muro normal para camuflarse
+            hitWall = true;
+        }
+        else if (type == 9) {
+            wallColor = sf::Color(40, 190, 80);
+            hitWall = true;
+        }
+    } else {
+        hitWall = true;
+    }
+}
+
+            if (hitWall && distance < maxDistance) {
+                drawColumn(i, distance, rayAngle, wallColor);
             }
         }
     }
@@ -145,11 +161,11 @@ private:
         window.clear();
         if (mapManager.showFullMap) {
             mapManager.drawFullMap(window);
-            // Dibujar punto del jugador en el minimapa
-            sf::CircleShape pDot(4);
+            
+            // Dibujar jugador en el mapa
+            sf::CircleShape pDot(5);
             pDot.setFillColor(sf::Color::Red);
-            pDot.setOrigin(4, 4);
-            // Centrar con respecto al minimapa
+            pDot.setOrigin(5, 5);
             Level* cur = mapManager.getCurrentLevel();
             float startX = (window.getSize().x - (cur->cols * 32)) / 2.0f;
             float startY = (window.getSize().y - (cur->rows * 32)) / 2.0f;
@@ -163,21 +179,14 @@ private:
 
 public:
     Game() : 
-        window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Doom Height Engine"),
+        window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Wolfenstein 3D Engine"),
         player(sf::Vector2f(96.0f, 96.0f)) 
     {
         window.setFramerateLimit(60);
-        Level* startLvl = mapManager.getCurrentLevel();
-        player.pos = startLvl->spawnPoint;
+        player.pos = mapManager.getCurrentLevel()->spawnPoint;
     }
 
     void run() {
-        Level* test = mapManager.getCurrentLevel();
-        if(test->cols <= 1) {
-            std::cerr << "CRITICAL ERROR: Geometria invalida." << std::endl;
-            return;
-        }
-
         while (window.isOpen()) {
             float deltaTime = gameClock.restart().asSeconds();
             processEvents();
@@ -187,7 +196,6 @@ public:
     }
 };
 
-// Punto de entrada único del programa
 int main() {
     Game game;
     game.run();

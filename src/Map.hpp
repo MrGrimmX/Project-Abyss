@@ -6,10 +6,17 @@
 #include <string>
 
 struct Tile {
-    int type;            // 0 = vacío, 1 = muro, 2 = puerta, 9 = salida
-    float floorHeight;   // Altura del suelo (0.0f normal, >0.0f plataformas)
-    float ceilingHeight; // Altura del techo
-    bool isElevator;     // ¿Es una plataforma móvil?
+    int type; // 0=vacío, 1=muro, 2=puerta, 3=MURO SECRETO, 9=salida
+};
+
+// Estructura para controlar la animación del muro secreto
+struct PushWall {
+    bool isActive = false;
+    int originalX, originalY; // Coordenadas de la celda de origen
+    int targetX, targetY;     // Coordenadas de la celda de destino
+    float moveX = 0.0f;       // Desplazamiento actual en el eje X (en píxeles)
+    float moveY = 0.0f;       // Desplazamiento actual en el eje Y (en píxeles)
+    float speed = 64.0f;      // Velocidad de movimiento (1 celda por segundo)
 };
 
 struct Level {
@@ -27,22 +34,22 @@ private:
 
 public:
     bool showFullMap;
-    float elevatorHeight;   
-    int elevatorDirection; 
-    float elevatorSpeed;
+    PushWall activeSecret; // <-- El muro secreto activo en el frame actual
 
     MapManager();
-    
     Level* getCurrentLevel();
     int getCurrentIndex() const;
     void nextLevel();
     
     bool isWall(int cellX, int cellY);
-    bool isExit(int cellX, int cellY);
     bool isDoor(int cellX, int cellY);
-    void openDoor(int cellX, int cellY);
+    bool isExit(int cellX, int cellY);
+    bool isSecret(int cellX, int cellY); // <-- Nueva función
     
-    void updateElevator(float deltaTime);
+    void openDoor(int cellX, int cellY);
+    void triggerSecret(int cellX, int cellY, float playerAngle); // <-- Nueva función
+    void updateSecret(float deltaTime);                          // <-- Nueva función
+    
     void drawFullMap(sf::RenderWindow& window);
 };
 
