@@ -6,6 +6,7 @@
 #include "Player.hpp"
 #include "Map.hpp"
 #include "TextureManager.hpp"
+#include "Menu.hpp"
 
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
@@ -61,18 +62,23 @@ private:
 
         for (int i = 0; i < numRays; i++) {
             float rayAngle = (player.angle - halfFov) + (float)i * deltaAngle;
+            
+            while (rayAngle < 0) rayAngle += 2.0f * 3.14159265f;
+            while (rayAngle >= 2.0f * 3.14159265f) rayAngle -= 2.0f * 3.14159265f;
+
             float cosRay = std::cos(rayAngle);
             float sinRay = std::sin(rayAngle);
 
             float distance = 0.0f;
-            float stepSize = 1.0f; 
+            float stepSize = 0.5f; 
             bool hitWall = false;
             int wallType = 1;      
+            int side = 0;          // 0 = Impacto Este/Oeste, 1 = Impacto Norte/Sur
             
             float rayX = player.pos.x;
             float rayY = player.pos.y;
 
-            while (!hitWall && distance < 800.0f) {
+while (!hitWall && distance < 800.0f) {
                 distance += stepSize;
                 rayX = player.pos.x + cosRay * distance;
                 rayY = player.pos.y + sinRay * distance;
@@ -80,35 +86,56 @@ private:
                 int testX = (int)(rayX) / TILE_SIZE;
                 int testY = (int)(rayY) / TILE_SIZE;
 
+                // 🌟 1. DETECCIÓN DINÁMICA DEL MURO SECRETO (SI SE ESTÁ MOVIENDO)
                 if (mapManager.activeSecret.isActive) {
-                    float wallMinX = mapManager.activeSecret.originalX * 64 + mapManager.activeSecret.moveX;
-                    float wallMaxX = wallMinX + 64;
-                    float wallMinY = mapManager.activeSecret.originalY * 64 + mapManager.activeSecret.moveY;
-                    float wallMaxY = wallMinY + 64;
+                    float wallMinX = (float)mapManager.activeSecret.originalX * TILE_SIZE + mapManager.activeSecret.moveX;
+                    float wallMaxX = wallMinX + TILE_SIZE;
+                    float wallMinY = (float)mapManager.activeSecret.originalY * TILE_SIZE + mapManager.activeSecret.moveY;
+                    float wallMaxY = wallMinY + TILE_SIZE;
 
                     if (rayX >= wallMinX && rayX < wallMaxX && rayY >= wallMinY && rayY < wallMaxY) {
                         wallType = 3; 
                         hitWall = true;
-                        break;
+
+                        float hitX = rayX - wallMinX;
+                        float hitY = rayY - wallMinY;
+
+                        if (std::min(hitX, (float)TILE_SIZE - hitX) < std::min(hitY, (float)TILE_SIZE - hitY)) {
+                            side = 0;
+                        } else {
+                            side = 1;
+                        }
+                        break; // Impacto dinámico encontrado
                     }
                 }
 
+                // 2. DETECCIÓN DE MUROS ESTÁTICOS Y SECRETOS EN REPOSO
                 if (testX >= 0 && testX < curLevel->cols && testY >= 0 && testY < curLevel->rows) {
                     int type = curLevel->grid[testY][testX].type;
-                    if (type == 1 || type == 3 || type == 9) {
+                    
+                    // 🌟 LA CLAVE: Detectar tipo 1, 2, 9 O TIPO 3 (SECRETO) SI NO SE ESTÁ MOVIENDO
+                    bool isStaticObstacle = (type == 1 || type == 9 || (type == 2 && !curLevel->grid[testY][testX].isOpen));
+                    bool isSecretAtRest = (type == 3 && !mapManager.activeSecret.isActive);
+
+                    if (isStaticObstacle || isSecretAtRest) {
                         wallType = type;
                         hitWall = true;
-                    }
-                    else if (type == 2 && !curLevel->grid[testY][testX].isOpen) {
-                        wallType = type;
-                        hitWall = true;
+
+                        float hitX = rayX - (testX * TILE_SIZE);
+                        float hitY = rayY - (testY * TILE_SIZE);
+
+                        if (std::min(hitX, (float)TILE_SIZE - hitX) < std::min(hitY, (float)TILE_SIZE - hitY)) {
+                            side = 0;
+                        } else {
+                            side = 1;
+                        }
                     }
                 } else {
                     hitWall = true; 
                 }
             }
 
-            // --- CÁLCULO DE PROYECCIÓN VERTICAL ---
+            // Proyección geométrica vertical
             float correctedDistance = distance * std::cos(rayAngle - player.angle);
             if (correctedDistance < 1.0f) correctedDistance = 1.0f; 
 
@@ -119,38 +146,46 @@ private:
             int screenDrawStart = std::max(0, drawStart);
             int screenDrawEnd = std::min(SCREEN_HEIGHT - 1, drawEnd);
 
-            // --- MAPEO HORIZONTAL (TEX_X) ---
+            // --- MAPEO HORIZONTAL DE TEXTURA ADAPTABLE (32x32) ---
             int blockX = (int)rayX % TILE_SIZE;
             int blockY = (int)rayY % TILE_SIZE;
-            int texX = 0;
+            int wallOffset = (side == 0) ? blockY : blockX;
 
-            if (std::abs(blockX - 0) < 2 || std::abs(blockX - 63) < 2) {
-                texX = blockY;
-            } else {
-                texX = blockX;
+            // Factor de escala: Tamaño real (32) / Tamaño del mundo (64)
+            float scaleFactor = (float)textureManager.getTextureSize() / (float)TILE_SIZE;
+            int texX = (int)((float)wallOffset * scaleFactor);
+
+            if ((side == 0 && cosRay > 0) || (side == 1 && sinRay < 0)) {
+                texX = textureManager.getTextureSize() - 1 - texX;
             }
-            texX = std::max(0, std::min(texX, TILE_SIZE - 1));
+            texX = std::max(0, std::min(texX, textureManager.getTextureSize() - 1));
 
-            // --- REBANADO VERTICAL (TEX_Y) ---
+            // --- RASTERIZADO VERTICAL CON VERTEX ARRAY ---
             sf::VertexArray wallSlice(sf::Points, screenDrawEnd - screenDrawStart);
             int vertexCounter = 0;
 
             for (int y = screenDrawStart; y < screenDrawEnd; y++) {
-                // Relación flotante exacta para mapear la textura de techo a suelo sin cortes
                 float texYRatio = (float)(y - drawStart) / (float)wallHeight;
-                int texY = (int)(texYRatio * textureManager.getTextureSize());
+                int texY = (int)(texYRatio * (float)textureManager.getTextureSize());
                 texY = std::max(0, std::min(texY, textureManager.getTextureSize() - 1));
 
-                sf::Color pixelColor = textureManager.getPixelColor(wallType, texX, texY);
+                // Si es el muro secreto (tipo 3), forzamos el renderizado de la textura de ladrillo (ID 1)
+                int textureToRender = (wallType == 3) ? 1 : wallType;
+                sf::Color pixelColor = textureManager.getPixelColor(textureToRender, texX, texY);
 
-                // Sombreado dinámico por distancia (Faux-3D depth)
+                // Efecto neblina / Profundidad en base a la distancia corregida
+                float shadow = 1.0f;
                 if (correctedDistance > 150.0f) {
-                    float shadow = 1.0f - (correctedDistance / 750.0f);
+                    shadow = 1.0f - (correctedDistance / 750.0f);
                     if (shadow < 0.15f) shadow = 0.15f;
-                    pixelColor.r = (sf::Uint8)(pixelColor.r * shadow);
-                    pixelColor.g = (sf::Uint8)(pixelColor.g * shadow);
-                    pixelColor.b = (sf::Uint8)(pixelColor.b * shadow);
                 }
+                if (side == 1) {
+                    shadow *= 0.7f; // Caras laterales más oscuras para volumen 3D
+                }
+
+                pixelColor.r = (sf::Uint8)((float)pixelColor.r * shadow);
+                pixelColor.g = (sf::Uint8)((float)pixelColor.g * shadow);
+                pixelColor.b = (sf::Uint8)((float)pixelColor.b * shadow);
 
                 wallSlice[vertexCounter].position = sf::Vector2f((float)i, (float)y);
                 wallSlice[vertexCounter].color = pixelColor;
@@ -161,9 +196,17 @@ private:
         }
     }
 
-    void render() {
-        window.clear(sf::Color(40, 40, 40)); 
+void render() {
+        // 1. Techo: Pintamos toda la pantalla con un gris oscuro uniforme
+        window.clear(sf::Color(45, 45, 50)); 
+
+        // 2. Suelo: Dibujamos un rectángulo que cubre la mitad inferior con un gris más claro
+        sf::RectangleShape floorShape(sf::Vector2f((float)SCREEN_WIDTH, (float)SCREEN_HEIGHT / 2.0f));
+        floorShape.setPosition(0.0f, (float)SCREEN_HEIGHT / 2.0f);
+        floorShape.setFillColor(sf::Color(145, 145, 145)); // Gris claro tipo concreto/metal
+        window.draw(floorShape);
         
+        // 3. Dibujar los muros con texturas encima de la escena
         renderRaycast();
 
         if (mapManager.showFullMap) {
@@ -177,7 +220,7 @@ public:
     Game() : 
         window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Wolfenstein 3D Engine - CETI"),
         player(sf::Vector2f(96.0f, 96.0f)),
-        textureManager(64)
+        textureManager(32) 
     {
         window.setFramerateLimit(60);
         player.pos = mapManager.getCurrentLevel()->spawnPoint;
@@ -185,7 +228,7 @@ public:
         if (!textureManager.loadTextures("../assets/texturas/CASTLEBRICKS.png")) {
             std::cerr << "🛑 Alerta: No se pudo cargar ../assets/texturas/CASTLEBRICKS.png" << std::endl;
         } else {
-            std::cout << "✅ Exito: Texturas cargadas correctamente." << std::endl;
+            std::cout << "✅ Éxito: Base recuperada y texturas de 32x32 cargadas." << std::endl;
         }
     }
 
