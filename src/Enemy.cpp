@@ -1,92 +1,114 @@
-#include "Enemigo.h"
+#include "Enemy.hpp"
 
-DoomEnemy::DoomEnemy(std::string name, int hp, float range, float speed, float painChance)
-    : name(name), hp(hp), attackRange(range), speed(speed), painChance(painChance), 
-      currentState(EnemyState::IDLE), position({0.0f, 0.0f}) {
-    std::srand(std::time(0)); // Inicializar semilla aleatoria
+Enemy::Enemy(float x, float y)
+{
+    posX = x;
+    posY = y;
+
+    texture.loadFromFile("assets/enemies/Recruit.png");
+
+    sprite.setTexture(texture);
+    sprite.setTextureRect(sf::IntRect(0, 0, 80, 80));
+
+    state = WALK;
+
+    health = 100;
+
+    currentFrame = 0;
+    animationTimer = 0.f;
+    frameDuration = 0.1f;
 }
 
-void DoomEnemy::update(Vector2D playerPos, bool playerFired) {
-    if (currentState == EnemyState::DEAD) return;
+bool Enemy::isAlive() const
+{
+    return state != DEAD;
+}
 
-    float distanceToPlayer = position.distance(playerPos);
+void Enemy::takeDamage(int damage)
+{
+    if (state == DEAD)
+        return;
 
-    switch (currentState) {
-        case EnemyState::IDLE:
-            // Percepción clásica: si el jugador dispara en la misma habitación 
-            // O si entra en el rango de visión cercano, el enemigo se "despierta"
-            if (playerFired || distanceToPlayer < 12.0f) {
-                currentState = EnemyState::CHASE;
-                std::cout << "📢 [" << name << "]: ¡GRRR! (Escuchó o vio al jugador. Alerta máxima).\n";
-            } else {
-                std::cout << "💤 [" << name << "] patrulla en estado pasivo.\n";
-            }
-            break;
+    health -= damage;
 
-        case EnemyState::CHASE:
-            // Si está lo suficientemente cerca, ataca
-            if (distanceToPlayer <= attackRange) {
-                currentState = EnemyState::ATTACK;
-            } else {
-                // Si no, sigue caminando hacia él
-                moveTowards(playerPos);
-                std::cout << "🏃 [" << name << "] persiguiendo. Pos: (" << position.x << ", " << position.y 
-                          << ") | Distancia: " << distanceToPlayer << "m\n";
-            }
-            break;
-
-        case EnemyState::ATTACK:
-            // En DOOM, el ataque detiene momentáneamente al enemigo
-            std::cout << "🔥 [" << name << "] lanza un proyectil/zarpazo directo al jugador!\n";
-            
-            // Tras atacar, regresa inmediatamente a perseguir (el bucle agresivo de DOOM)
-            currentState = EnemyState::CHASE; 
-            break;
-
-        case EnemyState::PAIN:
-            // El estado de dolor dura un frame/instante en la lógica, interrumpiendo lo que hacía
-            std::cout << "🥴 [" << name << "] se estremece por el impacto y pierde el turno de ataque!\n";
-            currentState = EnemyState::CHASE; // Recupera la compostura
-            break;
-
-        case EnemyState::DEAD:
-            break;
+    if (health <= 0)
+    {
+        state = DEAD;
+        currentFrame = 20;
+    }
+    else
+    {
+        state = HURT;
+        currentFrame = 16;
     }
 }
 
-void DoomEnemy::moveTowards(Vector2D targetPos) {
-    // Calcular dirección
-    float dx = targetPos.x - position.x;
-    float dy = targetPos.y - position.y;
-    float distance = std::sqrt(dx*dx + dy*dy);
+void Enemy::update(float deltaTime)
+{
+    animationTimer += deltaTime;
 
-    if (distance > 0) {
-        // Movimiento básico normalizado hacia el jugador
-        position.x += (dx / distance) * speed;
-        position.y += (dy / distance) * speed;
+    if (animationTimer >= frameDuration)
+    {
+        animationTimer = 0.f;
+        updateAnimation();
+    }
+}
 
-        // El toque errático de DOOM: 25% de probabilidad de hacer un ligero zigzag lateral
-        // Esto evita que se atoren perfectamente en esquinas y los hace menos predecibles
-        if ((std::rand() % 100) < 25) {
-            position.x += ((std::rand() % 3) - 1) * 0.5f; // Añade -0.5, 0 o 0.5 aleatorio
+void Enemy::updateAnimation()
+{
+    switch (state)
+    {
+        case WALK:
+        {
+            currentFrame++;
+
+            if (currentFrame > 7)
+                currentFrame = 0;
+
+            break;
         }
-    }
-}
 
-void DoomEnemy::takeDamage(int damage) {
-    if (currentState == EnemyState::DEAD) return;
+        case ATTACK:
+        {
+            currentFrame++;
 
-    hp -= damage;
-    std::cout << "\n💥 ¡Impacto en el enemigo! Daño infligido: " << damage << " | HP restante: " << hp << "\n";
+            if (currentFrame > 15)
+                currentFrame = 8;
 
-    if (hp <= 0) {
-        currentState = EnemyState::DEAD;
-        std::cout << "💀 [" << name << "]: Muere con un grito gutural y cae al suelo.\n\n";
-    } else {
-        // Simulación del "Pain Chance" original de DOOM
-        float randomRoll = static_cast<float>(std::rand()) / RAND_MAX;
-        if (randomRoll < painChance) {
-            currentState = EnemyState::PAIN;
+            break;
         }
+
+        case HURT:
+        {
+            currentFrame++;
+
+            if (currentFrame > 19)
+            {
+                currentFrame = 0;
+                state = WALK;
+            }
+
+            break;
+        }
+
+        case DEAD:
+        {
+            if (currentFrame < 23)
+                currentFrame++;
+
+            break;
+        }
+
+        default:
+            break;
     }
+
+    sprite.setTextureRect(
+        sf::IntRect(
+            currentFrame * 80,
+            0,
+            80,
+            80
+        )
+    );
 }

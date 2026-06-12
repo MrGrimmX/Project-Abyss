@@ -1,6 +1,8 @@
 #include "Player.hpp"
 #include <cmath>
-
+sf::Vector2f Player::getPosition() const {
+    return body.getPosition(); // Aquí usamos el nombre que definimos en el .hpp
+}
 int health = 100;
 int ammo = 50;
 int score = 0;

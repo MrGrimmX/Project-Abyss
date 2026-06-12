@@ -82,36 +82,67 @@ void MapManager::openDoor(int cellX, int cellY) {
     }
 }
 
-void MapManager::drawFullMap(sf::RenderWindow& window) {
+void MapManager::drawFullMap(sf::RenderWindow& window, const sf::Vector2f& playerPos) {
     if (levels.empty()) return;
     Level* cur = getCurrentLevel();
     int tileSize = 32;
     float startX = (window.getSize().x - (cur->cols * tileSize)) / 2.0f;
     float startY = (window.getSize().y - (cur->rows * tileSize)) / 2.0f;
     sf::RectangleShape tile(sf::Vector2f(tileSize - 2, tileSize - 2));
-
+    sf::CircleShape playerMarker(5.f);
+    playerMarker.setPosition(playerPos); 
+    window.draw(playerMarker);
+    
+    // ==========================================
+    // DIBUJAR EL MAPA COMPLETO
+    // ==========================================
     for (int r = 0; r < cur->rows; r++) {
-    for (int c = 0; c < cur->cols; c++) {
-        Tile cell = cur->grid[r][c];
-        
-        // 🌟 Si es muro normal (1) O muro secreto (3), pintarlo del mismo gris
-        if (cell.type == 1 || cell.type == 3) {
-            tile.setFillColor(sf::Color(100, 100, 100)); // Gris de muro
-        }     
-        else if (cell.type == 2) {
-            tile.setFillColor(sf::Color(150, 50, 150)); // Puerta Violeta
-        } 
-        else if (cell.type == 9) {
-            tile.setFillColor(sf::Color(35, 180, 70));   // Salida Verde
-        }   
-        else {
-            tile.setFillColor(sf::Color(35, 35, 35));    // Suelo libre
+        for (int c = 0; c < cur->cols; c++) {
+            Tile cell = cur->grid[r][c];
+            
+            // Asignar colores según tu diseño
+            if (cell.type == 1) {
+                tile.setFillColor(sf::Color(70, 130, 200));  // AZUL (paredes)
+            }     
+            else if (cell.type == 2) {
+                tile.setFillColor(sf::Color(180, 180, 180)); // GRIS (puertas)
+            } 
+            else if (cell.type == 9) {
+                tile.setFillColor(sf::Color(35, 180, 70));   // Verde (salida)
+            }   
+            else {
+                tile.setFillColor(sf::Color(50, 50, 50));    // Gris oscuro (suelo)
+            }
+            
+            tile.setPosition(startX + c * tileSize, startY + r * tileSize);
+            window.draw(tile);
         }
-
-        tile.setPosition(startX + c * tileSize, startY + r * tileSize);
-        window.draw(tile);
     }
-}
+    
+    // ==========================================
+    // DIBUJAR AL JUGADOR (cuadrado rojo)
+    // ==========================================
+    // Convertir posición del jugador (píxeles) a coordenadas de celda
+    int playerTileX = (int)(playerPos.x / tileSize);
+    int playerTileY = (int)(playerPos.y / tileSize);
+    
+    // Calcular posición en pantalla
+    float playerScreenX = startX + playerTileX * tileSize;
+    float playerScreenY = startY + playerTileY * tileSize;
+    
+    // Dibujar un cuadrado para el jugador
+    sf::RectangleShape playerTile(sf::Vector2f(tileSize - 2, tileSize - 2));
+    playerTile.setFillColor(sf::Color(255, 50, 50));  // ROJO
+    playerTile.setPosition(playerScreenX, playerScreenY);
+    window.draw(playerTile);
+    
+    // OPCIONAL: Dibujar un borde alrededor del jugador para que resalte más
+    sf::RectangleShape playerBorder(sf::Vector2f(tileSize - 2, tileSize - 2));
+    playerBorder.setFillColor(sf::Color::Transparent);
+    playerBorder.setOutlineColor(sf::Color::White);
+    playerBorder.setOutlineThickness(2);
+    playerBorder.setPosition(playerScreenX, playerScreenY);
+    window.draw(playerBorder);
 }
 
 bool MapManager::isSecret(int cellX, int cellY) {
@@ -210,4 +241,5 @@ void MapManager::updateDoors(float deltaTime, sf::Vector2f playerPos) {
             }
         }
     }
+    
 }

@@ -72,6 +72,15 @@ Menu::~Menu() {}
 
 void Menu::handleInput(const sf::Event& event, GameState& state)
 {
+    if (showingControls)
+    {
+        if (event.type == sf::Event::KeyPressed &&
+            event.key.code == sf::Keyboard::Escape)
+        {
+            showingControls = false;
+        }
+        return;
+    }
     if (event.type == sf::Event::KeyPressed)
     {
         switch (event.key.code)
@@ -193,6 +202,7 @@ if (showingControls)
         float spacing = 60;
         
         for (size_t i = 0; i < currentOptions->size() && i < menuItems.size(); i++) {
+            menuItems[i].setString((*currentOptions)[i]);
             sf::FloatRect bounds = menuItems[i].getLocalBounds();
 
             menuItems[i].setOrigin(

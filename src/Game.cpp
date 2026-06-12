@@ -262,7 +262,7 @@ void Game::render() {
         renderHUD();
 
         if (mapManager.showFullMap) {
-            mapManager.drawFullMap(window);
+            mapManager.drawFullMap(window, player.getPosition());        
         }
         
         // Si está en pausa, dibujar overlay del menú

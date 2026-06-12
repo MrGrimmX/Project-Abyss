@@ -2,61 +2,234 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 
+// Tipos de tiles
+// 0 = Vacío (caminable)
+// 1 = Pared
+// 2 = Puerta (se puede abrir)
+// 3-8 = Reservado para futuros elementos
+
+// Función para crear un mapa vacío con bordes
+Level crearMapaBase(std::string nombre, int filas, int columnas, float spawnX, float spawnY) {
+    Level mapa;
+    mapa.name = nombre;
+    mapa.rows = filas;
+    mapa.cols = columnas;
+    mapa.spawnPoint = sf::Vector2f(spawnX, spawnY);
+    
+    // Crear grid vacío (todo tipo 0 = vacío)
+    mapa.grid.resize(filas, std::vector<Tile>(columnas, {0}));
+    
+    // Paredes exteriores (borde completo)
+    for(int i = 0; i < filas; i++) {
+        mapa.grid[i][0].type = 1;                    // Pared izquierda
+        mapa.grid[i][columnas-1].type = 1;           // Pared derecha
+        mapa.grid[0][i].type = 1;                    // Pared superior
+        mapa.grid[filas-1][i].type = 1;              // Pared inferior
+    }
+    
+    return mapa;
+}
+
+// Poner una pared en una posición específica
+void ponerPared(Level& mapa, int fila, int columna) {
+    if(fila >= 0 && fila < mapa.rows && columna >= 0 && columna < mapa.cols) {
+        mapa.grid[fila][columna].type = 1;
+    }
+}
+
+// Poner una puerta
+void ponerPuerta(Level& mapa, int fila, int columna) {
+    if(fila >= 0 && fila < mapa.rows && columna >= 0 && columna < mapa.cols) {
+        mapa.grid[fila][columna].type = 2;
+    }
+}
+
+// ==========================================
+// MAPA 1: ARENA PEQUEÑA (8x8)
+// ==========================================
+Level crearMapaArenaPequeña() {
+    Level mapa = crearMapaBase("Arena Pequeña", 8, 8, 96.0f, 96.0f);
+    
+    // Obstáculos simples
+    ponerPared(mapa, 3, 3);
+    ponerPared(mapa, 3, 4);
+    ponerPared(mapa, 4, 3);
+    ponerPared(mapa, 4, 4);
+    
+    ponerPared(mapa, 2, 6);
+    ponerPared(mapa, 5, 5);
+    ponerPared(mapa, 6, 2);
+    
+    // Puertas que pueden abrirse durante la partida
+    ponerPuerta(mapa, 4, 6);
+    ponerPuerta(mapa, 2, 1);
+    
+    return mapa;
+}
+
+// ==========================================
+// MAPA 2: ARENA MEDIANA (10x10)
+// ==========================================
+Level crearMapaArenaMediana() {
+    Level mapa = crearMapaBase("Arena Mediana", 10, 10, 144.0f, 144.0f);
+    
+    // Bloque central grande
+    for(int i = 3; i <= 6; i++) {
+        for(int j = 3; j <= 6; j++) {
+            if(i == 4 && j == 4) continue; // Espacio vacío en el medio
+            ponerPared(mapa, i, j);
+        }
+    }
+    
+    // Obstáculos en las esquinas
+    ponerPared(mapa, 2, 2);
+    ponerPared(mapa, 2, 7);
+    ponerPared(mapa, 7, 2);
+    ponerPared(mapa, 7, 7);
+    ponerPared(mapa, 8, 8);
+    
+    // Paredes dispersas
+    ponerPared(mapa, 1, 5);
+    ponerPared(mapa, 5, 8);
+    ponerPared(mapa, 8, 4);
+    
+    // Puertas
+    ponerPuerta(mapa, 5, 1);
+    ponerPuerta(mapa, 8, 5);
+    
+    return mapa;
+}
+
+// ==========================================
+// MAPA 3: LABERINTO (12x12)
+// ==========================================
+Level crearMapaLaberinto() {
+    Level mapa = crearMapaBase("Laberinto", 12, 12, 96.0f, 96.0f);
+    
+    // Crear pasillos con paredes en forma de espiral
+    
+    // Paredes horizontales
+    for(int i = 2; i <= 4; i++) {
+        ponerPared(mapa, 2, i);
+        ponerPared(mapa, 4, i);
+        ponerPared(mapa, 6, i+4);
+        ponerPared(mapa, 8, i+6);
+    }
+    
+    // Paredes verticales
+    for(int i = 3; i <= 9; i++) {
+        ponerPared(mapa, i, 3);
+        ponerPared(mapa, i, 5);
+        ponerPared(mapa, i, 7);
+        ponerPared(mapa, i, 9);
+    }
+    
+    // Obstáculos adicionales
+    ponerPared(mapa, 5, 8);
+    ponerPared(mapa, 7, 4);
+    ponerPared(mapa, 9, 2);
+    ponerPared(mapa, 10, 10);
+    
+    // Múltiples puertas estratégicas
+    ponerPuerta(mapa, 3, 5);
+    ponerPuerta(mapa, 5, 7);
+    ponerPuerta(mapa, 7, 9);
+    ponerPuerta(mapa, 9, 4);
+    ponerPuerta(mapa, 4, 8);
+    
+    return mapa;
+}
+
+// ==========================================
+// MAPA 4: ARENA GRANDE (15x15)
+// ==========================================
+Level crearMapaArenaGrande() {
+    Level mapa = crearMapaBase("Arena Grande", 15, 15, 144.0f, 144.0f);
+    
+    // Arena con múltiples obstáculos tipo cobertura
+    
+    // Cuadrantes de cobertura
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            ponerPared(mapa, 3 + i, 3 + j);
+            ponerPared(mapa, 10 + i, 3 + j);
+            ponerPared(mapa, 3 + i, 10 + j);
+            ponerPared(mapa, 10 + i, 10 + j);
+        }
+    }
+    
+    // Paredes largas para cobertura
+    for(int i = 4; i <= 10; i++) {
+        ponerPared(mapa, 7, i);  // Pared horizontal central
+        ponerPared(mapa, i, 7);  // Pared vertical central
+    }
+    
+    // Columnas individuales
+    ponerPared(mapa, 2, 8);
+    ponerPared(mapa, 12, 8);
+    ponerPared(mapa, 8, 2);
+    ponerPared(mapa, 8, 12);
+    
+    // Puertas
+    ponerPuerta(mapa, 7, 4);
+    ponerPuerta(mapa, 7, 10);
+    ponerPuerta(mapa, 4, 7);
+    ponerPuerta(mapa, 10, 7);
+    
+    return mapa;
+}
+
+// ==========================================
+// MAPA 5: ARENA EXTREMA (12x12 con diseño único)
+// ==========================================
+Level crearMapaArenaExtrema() {
+    Level mapa = crearMapaBase("Arena Extrema", 12, 12, 96.0f, 96.0f);
+    
+    // Forma de cruz gigante
+    for(int i = 1; i <= 10; i++) {
+        ponerPared(mapa, 6, i);  // Línea horizontal
+        ponerPared(mapa, i, 6);  // Línea vertical
+    }
+    
+    // Cuatro zonas de cobertura en las esquinas
+    // Esquina superior izquierda
+    ponerPared(mapa, 2, 2); ponerPared(mapa, 2, 3); ponerPared(mapa, 3, 2);
+    // Esquina superior derecha
+    ponerPared(mapa, 2, 9); ponerPared(mapa, 2, 8); ponerPared(mapa, 3, 9);
+    // Esquina inferior izquierda
+    ponerPared(mapa, 9, 2); ponerPared(mapa, 9, 3); ponerPared(mapa, 8, 2);
+    // Esquina inferior derecha
+    ponerPared(mapa, 9, 9); ponerPared(mapa, 9, 8); ponerPared(mapa, 8, 9);
+    
+    // Obstáculos en los brazos de la cruz
+    ponerPared(mapa, 4, 6);
+    ponerPared(mapa, 8, 6);
+    ponerPared(mapa, 6, 4);
+    ponerPared(mapa, 6, 8);
+    
+    // Puertas en todas las direcciones
+    ponerPuerta(mapa, 3, 6);
+    ponerPuerta(mapa, 6, 3);
+    ponerPuerta(mapa, 6, 9);
+    ponerPuerta(mapa, 9, 6);
+    ponerPuerta(mapa, 5, 5);
+    ponerPuerta(mapa, 7, 7);
+    
+    return mapa;
+}
+
+// ==========================================
+// FUNCIÓN PRINCIPAL: OBTENER TODOS LOS MAPAS
+// ==========================================
 std::vector<Level> getBuiltInLevels() {
-    std::vector<Level> allLevels;
-
-    // ==========================================
-    // NIVEL 1: El Escape
-    // ==========================================
-    Level lvl1;
-    lvl1.name = "El Escape";
-    lvl1.rows = 8; 
-    lvl1.cols = 8;
-    lvl1.spawnPoint = sf::Vector2f(96.0f, 96.0f); // Celda [1][1]
-    lvl1.grid.resize(8, std::vector<Tile>(8, {0})); // Todo vacío por defecto
-
-    // Crear muros exteriores perimetrales
-    for(int i = 0; i < 8; i++) {
-        lvl1.grid[0][i].type = 1; 
-        lvl1.grid[7][i].type = 1; 
-        lvl1.grid[i][0].type = 1; 
-        lvl1.grid[i][8-1].type = 1; 
-    }
-
-    // Geometría interna clásica Wolfenstein
-    lvl1.grid[3][2].type = 1;
-    lvl1.grid[3][3].type = 2; // Puerta Violeta de paso obligado
-    lvl1.grid[3][4].type = 1;
-    lvl1.grid[2][1].type = 3; // Muro secreto camuflado en la pared izquierda
-    lvl1.grid[2][0].type = 0; // Pasillo oculto exterior por donde se retirará el bloque
+    std::vector<Level> todosLosMapas;
     
-    lvl1.grid[5][5].type = 9; // Cuadro de Salida Verde al Nivel 2
-
-    allLevels.push_back(lvl1);
-
-    // ==========================================
-    // NIVEL 2: Los Laberintos Azules
-    // ==========================================
-    Level lvl2;
-    lvl2.name = "Laberinto";
-    lvl2.rows = 8; 
-    lvl2.cols = 8;
-    lvl2.spawnPoint = sf::Vector2f(96.0f, 96.0f);
-    lvl2.grid.resize(8, std::vector<Tile>(8, {0}));
+    // Añadir todos los mapas disponibles
+    todosLosMapas.push_back(crearMapaArenaPequeña());   // Mapa 1
+    todosLosMapas.push_back(crearMapaArenaMediana());   // Mapa 2
+    todosLosMapas.push_back(crearMapaLaberinto());      // Mapa 3
+    todosLosMapas.push_back(crearMapaArenaGrande());    // Mapa 4
+    todosLosMapas.push_back(crearMapaArenaExtrema());   // Mapa 5
     
-    for(int i = 0; i < 8; i++) {
-        lvl2.grid[0][i].type = 1; 
-        lvl2.grid[7][i].type = 1; 
-        lvl2.grid[i][0].type = 1; 
-        lvl2.grid[i][7].type = 1; 
-    }
-
-    // Paredes del laberinto plano
-    lvl2.grid[2][2].type = 1; lvl2.grid[2][3].type = 1; lvl2.grid[2][4].type = 1;
-    lvl2.grid[4][4].type = 1; lvl2.grid[5][4].type = 1;
-    lvl2.grid[5][5].type = 9; // Salida final del juego
-
-    allLevels.push_back(lvl2);
-
-    return allLevels;
+    return todosLosMapas;
 }

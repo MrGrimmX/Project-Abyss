@@ -42,18 +42,15 @@ public:
     Level* getCurrentLevel();
     int getCurrentIndex() const;
     void nextLevel();
-    
     bool isWall(int cellX, int cellY);
     bool isDoor(int cellX, int cellY);
     bool isExit(int cellX, int cellY);
     bool isSecret(int cellX, int cellY);
-    
     void openDoor(int cellX, int cellY);
-    void updateDoors(float deltaTime, sf::Vector2f playerPos); // 🌟 NUEVO: Cierra las puertas con el tiempo
+    void updateDoors(float deltaTime, sf::Vector2f playerPos);
     void triggerSecret(int cellX, int cellY, float playerAngle);
     void updateSecret(float deltaTime);
-    
-    void drawFullMap(sf::RenderWindow& window);
+    void drawFullMap(sf::RenderWindow& window, const sf::Vector2f& playerPos);
 };
 
 #endif

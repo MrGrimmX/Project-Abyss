@@ -7,6 +7,7 @@
 class Player {
 public:
     sf::Vector2f pos;
+    sf::Vector2f getPosition() const;
     float angle;
 
     // Estadísticas del jugador
@@ -21,6 +22,8 @@ public:
 
     Player(sf::Vector2f startPos);
     void update(float deltaTime, MapManager& mapManager);
+private:
+    sf::RectangleShape body;
 };
 
 #endif
