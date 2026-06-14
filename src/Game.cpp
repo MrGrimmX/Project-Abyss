@@ -35,52 +35,88 @@ while(player.angle >= 2.0f * PI)
 
 Game::~Game() {}
 
-void Game::processEvents() {
+void Game::processEvents()
+{
     sf::Event event;
-    while (window.pollEvent(event)) {
+
+    while (window.pollEvent(event))
+    {
         if (event.type == sf::Event::Closed)
             gameState = EXIT_GAME;
-        
-        // Manejar entrada del menú si estamos en menú o pausa
-        if (gameState == MENU_MAIN || gameState == MENU_OPTIONS || gameState == GAME_PAUSED) {
+
+        if (gameState == MENU_MAIN || gameState == MENU_OPTIONS || gameState == GAME_PAUSED)
+        {
             menu.handleInput(event, gameState);
         }
-        
-        // Manejar entrada del juego solo si estamos jugando
-        if (gameState == GAME_RUNNING) {
-            if (event.type == sf::Event::KeyPressed) {
-                switch (event.key.code) {
-                    case sf::Keyboard::Space:
-                        {
-                            float lookX = player.pos.x + std::cos(player.angle) * 45.0f;
-                            float lookY = player.pos.y + std::sin(player.angle) * 45.0f;
-                            int targetX = (int)(lookX) / TILE_SIZE;
-                            int targetY = (int)(lookY) / TILE_SIZE;
-                            
-                            if (mapManager.isDoor(targetX, targetY)) {
-                                mapManager.openDoor(targetX, targetY);
-                            }
-                            else if (mapManager.isSecret(targetX, targetY)) {
-                                mapManager.triggerSecret(targetX, targetY, player.angle);
-                            }
-                        }
+
+        if (gameState == GAME_RUNNING)
+        {
+            // TECLADO
+            if (event.type == sf::Event::KeyPressed)
+            {
+                switch (event.key.code)
+                {
+                    case sf::Keyboard::Num1:
+                        player.switchWeapon(WeaponType::Pistol);
                         break;
+
+                    case sf::Keyboard::Num2:
+                        player.switchWeapon(WeaponType::AK);
+                        break;
+
+                    case sf::Keyboard::Num3:
+                        player.switchWeapon(WeaponType::Shotgun);
+                        break;
+
+                    case sf::Keyboard::Num4:
+                        player.switchWeapon(WeaponType::Cannon);
+                        break;
+
+                    case sf::Keyboard::Num5:
+                        player.switchWeapon(WeaponType::SKS);
+                        break;
+
+                    case sf::Keyboard::Num6:
+                        player.switchWeapon(WeaponType::Uzi);
+                        break;
+
+                    case sf::Keyboard::Space:
+                    {
+                        float lookX = player.pos.x + std::cos(player.angle) * 45.0f;
+                        float lookY = player.pos.y + std::sin(player.angle) * 45.0f;
+
+                        int targetX = (int)(lookX) / TILE_SIZE;
+                        int targetY = (int)(lookY) / TILE_SIZE;
+
+                        if (mapManager.isDoor(targetX, targetY))
+                            mapManager.openDoor(targetX, targetY);
+
+                        else if (mapManager.isSecret(targetX, targetY))
+                            mapManager.triggerSecret(targetX, targetY, player.angle);
+
+                        break;
+                    }
+
                     case sf::Keyboard::Tab:
                         mapManager.showFullMap = !mapManager.showFullMap;
                         break;
+
                     case sf::Keyboard::Escape:
                         gameState = GAME_PAUSED;
                         menu.setState(GAME_PAUSED);
                         break;
-                    case sf::Event::MouseButtonPressed:
-                    if(event.mouseButton.button == sf::Mouse::Left)
-                    {
-                        std::cout << "BANG!" << std::endl;
-                    }
 
-                        break;
                     default:
                         break;
+                }
+            }
+
+            // MOUSE (FUERA DEL SWITCH)
+            if (event.type == sf::Event::MouseButtonPressed)
+            {
+                if (event.mouseButton.button == sf::Mouse::Left)
+                {
+                    player.getCurrentWeapon()->shoot();
                 }
             }
         }
@@ -90,6 +126,7 @@ void Game::processEvents() {
 void Game::update(float deltaTime) {
     if (gameState == GAME_RUNNING) {
         player.update(deltaTime, mapManager);
+        player.getCurrentWeapon()->update(deltaTime);
         sf::Vector2i center(
     window.getSize().x / 2,
     window.getSize().y / 2
@@ -242,7 +279,6 @@ void Game::renderRaycast() {
             wallSlice[vertexCounter].color = pixelColor;
             vertexCounter++;
         }
-        
         window.draw(wallSlice);
     }
 }
@@ -256,9 +292,12 @@ void Game::render() {
         floorShape.setPosition(0.0f, (float)SCREEN_HEIGHT / 2.0f);
         floorShape.setFillColor(sf::Color(145, 145, 145));
         window.draw(floorShape);
+        Weapon* weapon = player.getCurrentWeapon();
+weapon->sprite.setPosition(SCREEN_WIDTH / 2.f - weapon->frameWidth / 2.f + 80.f, SCREEN_HEIGHT - weapon->frameHeight - 50.f);
+
+window.draw(weapon->sprite);
         
         renderRaycast();
-
         renderHUD();
 
         if (mapManager.showFullMap) {
@@ -280,12 +319,9 @@ void Game::render() {
 
 void Game::renderHUD()
 {
-    const int HUD_HEIGHT = 120;
+    const int HUD_HEIGHT = 100;
 
-    if(!hudFont.loadFromFile("assets/Fonts/Gamer.ttf"))
-{
-    std::cout << "Error cargando fuente" << std::endl;
-}
+    hudFont.loadFromFile("assets/Fonts/Gamer.ttf");
 
     sf::RectangleShape hudBg(
         sf::Vector2f(SCREEN_WIDTH, HUD_HEIGHT));
@@ -319,16 +355,10 @@ void Game::renderHUD()
     ammoText.setCharacterSize(24);
     ammoText.setFillColor(sf::Color::White);
 
-    ammoText.setString(
-        "MUN: " +
-        std::to_string(player.ammo));
+    ammoText.setString(    "AMMO: " + std::to_string(player.getCurrentAmmo()));
+    ammoText.setPosition(250, SCREEN_HEIGHT - 90);
 
-    ammoText.setPosition(
-        250,
-        SCREEN_HEIGHT - 90);
-
-    window.draw(ammoText);
-
+window.draw(ammoText);
     sf::Text scoreText;
     scoreText.setFont(hudFont);
     scoreText.setCharacterSize(24);
