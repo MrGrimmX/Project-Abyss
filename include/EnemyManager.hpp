@@ -12,6 +12,5 @@ public:
     void update(float dt, sf::Vector2f playerPos, MapManager& mapManager);
     void draw(sf::RenderWindow& window);
     
-    // Getter para acceder a la lista si necesitas verificar colisiones con balas
     std::vector<Enemy>& getEnemies() { return enemies; }
 };

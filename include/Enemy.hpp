@@ -7,11 +7,6 @@ enum class EnemyType
     Merc,
     Recruit,
     Trooper,
-    Heavy,
-    Cobra,
-    Insect,
-    Mutant,
-    Robot
 };
 
 class Enemy

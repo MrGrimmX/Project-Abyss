@@ -3,7 +3,7 @@
 void EnemyManager::spawnEnemy(EnemyType type, sf::Vector2f position) {
     Enemy newEnemy;
     newEnemy.load(type);
-    newEnemy.pos = position; // Establecemos la posición inicial
+    newEnemy.pos = position;
     newEnemy.sprite.setPosition(position);
     enemies.push_back(newEnemy);
 }

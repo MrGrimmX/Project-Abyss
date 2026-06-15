@@ -8,6 +8,7 @@
 #include "TextureManager.hpp"
 #include "Menu.hpp"
 #include "Enemy.hpp"
+#include "EnemyManager.hpp"
 
 class Game {
 private:
@@ -19,7 +20,7 @@ private:
     Menu menu;
     GameState gameState;
     sf::Font hudFont;
-    std::vector<std::unique_ptr<Enemy>> enemies;
+    std::vector<Enemy> enemies;
     sf::Vector2f findSpawnPosition();
     void spawnWave(int wave);
     bool waveSpawned = false;
@@ -30,6 +31,7 @@ private:
     void renderRaycast();
     void renderHUD();
     void renderEnemies();
+    void loadFixedEnemies();
     
 public:
     Game();

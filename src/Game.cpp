@@ -18,11 +18,7 @@ Game::Game() :
     window.setMouseCursorVisible(false);
     window.setKeyRepeatEnabled(false);
     
-    if (!textureManager.loadTextures("assets/texturas/CASTLEBRICKS.png")) {
-        std::cerr << "🛑 Alerta: No se pudo cargar assets/texturas/CASTLEBRICKS.png" << std::endl;
-    } else {
-        std::cout << "✅ Éxito: Base recuperada y texturas de 32x32 cargadas." << std::endl;
-    }
+    textureManager.loadTextures("assets/texturas/CASTLEBRICKS.png");
 
     const float PI = 3.14159265f;
 
@@ -31,6 +27,18 @@ while(player.angle < 0)
 
 while(player.angle >= 2.0f * PI)
     player.angle -= 2.0f * PI;
+
+enemies.clear();
+
+Enemy e1;
+e1.load(EnemyType::Grunt);
+e1.pos = sf::Vector2f(5 * 64 + 32, 5 * 64 + 32);
+enemies.push_back(e1);
+
+Enemy e2;
+e2.load(EnemyType::Grunt);
+e2.pos = sf::Vector2f(10 * 64 + 32, 10 * 64 + 32);
+enemies.push_back(e2);
 }
 
 Game::~Game() {}
@@ -51,7 +59,6 @@ void Game::processEvents()
 
         if (gameState == GAME_RUNNING)
         {
-            // TECLADO
             if (event.type == sf::Event::KeyPressed)
             {
                 switch (event.key.code)
@@ -107,7 +114,6 @@ void Game::processEvents()
                 }
             }
 
-            // MOUSE (FUERA DEL SWITCH)
 Weapon* weapon = player.getCurrentWeapon();
 
 bool mouse = sf::Mouse::isButtonPressed(sf::Mouse::Left);
@@ -136,9 +142,9 @@ else
 
     lastMouse = mouse;
 }
-        } // GAME_RUNNING
-    } // while
-} // processEvents
+        }
+    }
+}
 
 void Game::update(float deltaTime) {
     if (gameState == GAME_RUNNING) {
@@ -199,7 +205,6 @@ void Game::renderRaycast() {
             int testX = (int)(rayX) / TILE_SIZE;
             int testY = (int)(rayY) / TILE_SIZE;
             
-            // Detección de muro secreto activo
             if (mapManager.activeSecret.isActive) {
                 float wallMinX = (float)mapManager.activeSecret.originalX * TILE_SIZE + mapManager.activeSecret.moveX;
                 float wallMaxX = wallMinX + TILE_SIZE;
@@ -222,7 +227,6 @@ void Game::renderRaycast() {
                 }
             }
             
-            // Detección de muros estáticos
             if (testX >= 0 && testX < curLevel->cols && testY >= 0 && testY < curLevel->rows) {
                 int type = curLevel->grid[testY][testX].type;
                 
@@ -303,7 +307,6 @@ void Game::renderRaycast() {
 
 void Game::render() {
     if (gameState == GAME_RUNNING || gameState == GAME_PAUSED) {
-        // Renderizar el juego
         window.clear(sf::Color(45, 45, 50));
         
         sf::RectangleShape floorShape(sf::Vector2f((float)SCREEN_WIDTH, (float)SCREEN_HEIGHT / 2.0f));
@@ -322,12 +325,10 @@ window.draw(weapon->sprite);
             mapManager.drawFullMap(window, player.getPosition());        
         }
         
-        // Si está en pausa, dibujar overlay del menú
         if (gameState == GAME_PAUSED) {
             menu.render(window);
         }
     } else {
-        // Renderizar solo el menú
         window.clear(sf::Color(0, 0, 0));
         menu.render(window);
     }

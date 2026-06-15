@@ -24,19 +24,7 @@ void Enemy::load(EnemyType t)
     switch(type)
     {
         case EnemyType::Grunt:
-if(!texture.loadFromFile("assets/Enemies/Grunt.png"))
-{
-    std::cout << "ERROR cargando Grunt.png" << std::endl;
-}
-else
-{
-    std::cout
-        << "Grunt cargado: "
-        << texture.getSize().x
-        << "x"
-        << texture.getSize().y
-        << std::endl;
-}
+            texture.loadFromFile("assets/Enemies/Grunt.png");
             sprite.setTexture(texture);
             frameWidth = 64;
             frameHeight = 80;
@@ -82,66 +70,6 @@ else
             speed = 50.f;
             damage = 10;
             break;
-
-        case EnemyType::Heavy:
-            texture.loadFromFile("assets/Enemies/Heavy.png");
-            sprite.setTexture(texture);
-            frameWidth = 64;
-            frameHeight = 64;
-            totalFrames = 9;
-            animationSpeed = 0.06f;
-            health = 200;
-            speed = 40.f;
-            damage = 50;
-            break;
-
-        case EnemyType::Cobra:
-            texture.loadFromFile("assets/Enemies/Cobra.png");
-            sprite.setTexture(texture);
-            frameWidth = 64;
-            frameHeight = 64;
-            totalFrames = 11;
-            animationSpeed = 0.06f;
-            health = 175;
-            speed = 40.f;
-            damage = 50;
-            break;
-
-        case EnemyType::Insect:
-            texture.loadFromFile("assets/Enemies/Insect.png");
-            sprite.setTexture(texture);
-            frameWidth = 64;
-            frameHeight = 64;
-            totalFrames = 9;
-            animationSpeed = 0.06f;
-            health = 150;
-            speed = 40.f;
-            damage = 50;
-            break;
-
-        case EnemyType::Mutant:
-            texture.loadFromFile("assets/Enemies/Mutant.png");
-            sprite.setTexture(texture);
-            frameWidth = 64;
-            frameHeight = 64;
-            totalFrames = 9;
-            animationSpeed = 0.06f;
-            health = 125;
-            speed = 40.f;
-            damage = 25;
-            break;
-
-        case EnemyType::Robot:
-            texture.loadFromFile("assets/Enemies/Robot.png");
-            sprite.setTexture(texture);
-            frameWidth = 64;
-            frameHeight = 64;
-            totalFrames = 7;
-            animationSpeed = 0.06f;
-            health = 400;
-            speed = 50.f;
-            damage = 75;
-            break;
     }
 
     currentFrame = 0;
@@ -157,9 +85,7 @@ else
     );
 }
 
-void Enemy::update(float dt,
-                   sf::Vector2f playerPos,
-                   MapManager& mapManager)
+void Enemy::update(float dt, sf::Vector2f playerPos, MapManager& mapManager)
 {
     if(!alive)
         return;

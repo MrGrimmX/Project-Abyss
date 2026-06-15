@@ -6,12 +6,11 @@
 #include <string>
 
 struct Tile {
-    int type;          // 0=vacío, 1=muro, 2=puerta, 3=secreto, 9=salida
-    bool isOpen = false; // 🌟 NUEVO: Indica si la puerta está abierta
-    float doorTimer = 0.0f; // 🌟 NUEVO: Cuenta los segundos que lleva abierta
+    int type;
+    bool isOpen = false;
+    float doorTimer = 0.0f;
 };
 
-// (Mantén el struct PushWall y Level exactamente como los tienes)
 struct PushWall {
     bool isActive = false;
     int originalX, originalY;

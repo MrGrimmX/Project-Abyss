@@ -11,7 +11,6 @@ public:
     sf::Vector2f getPosition() const;
     float angle;
 
-    // Estadísticas del jugador
     int health = 100;
     int armor = 0;
     int pistolAmmo = 50;

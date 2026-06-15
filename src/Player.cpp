@@ -1,7 +1,7 @@
 #include "Player.hpp"
 #include <cmath>
 sf::Vector2f Player::getPosition() const {
-    return body.getPosition(); // Aquí usamos el nombre que definimos en el .hpp
+    return body.getPosition();
 }
 
 Player::Player(sf::Vector2f startPos)
@@ -32,7 +32,6 @@ Player::Player(sf::Vector2f startPos)
     pistol.damage = 15;
     pistol.sprite.setTextureRect(sf::IntRect(0,0,320,180));
 
-    // AK
     ak.texture.loadFromFile("assets/weapons/AK.png");
     ak.sprite.setTexture(ak.texture);
     ak.frameWidth = 320;
@@ -44,7 +43,6 @@ Player::Player(sf::Vector2f startPos)
     ak.damage = 30;
     ak.sprite.setTextureRect(sf::IntRect(0,0,320,180));
 
-    // SHOTGUN
     shotgun.texture.loadFromFile("assets/weapons/Shotgun.png");
     shotgun.sprite.setTexture(shotgun.texture);
     shotgun.frameWidth = 320;
@@ -56,7 +54,6 @@ Player::Player(sf::Vector2f startPos)
     shotgun.damage = 50;
     shotgun.sprite.setTextureRect(sf::IntRect(0,0,320,180));
 
-    // SKS
     sks.texture.loadFromFile("assets/weapons/SKS.png");
     sks.sprite.setTexture(sks.texture);
     sks.frameWidth = 320;
@@ -68,7 +65,6 @@ Player::Player(sf::Vector2f startPos)
     sks.damage = 60;
     sks.sprite.setTextureRect(sf::IntRect(0,0,320,180));
 
-    // UZI
     uzi.texture.loadFromFile("assets/weapons/Uzi.png");
     uzi.sprite.setTexture(uzi.texture);
     uzi.frameWidth = 320;
@@ -209,15 +205,12 @@ float moveSpeed = baseSpeed * deltaTime;
         pos.y += std::sin(angle + 1.570796f) * moveSpeed;
     }
 
-    // 4. Mapear las coordenadas flotantes a celdas enteras del mapa
     int cellX = (int)(pos.x) / 64;
     int cellY = (int)(pos.y) / 64;
 
-    // 5. Verificar colisión inteligente (Muros, Puertas cerradas y Secretos en movimiento)
     if (mapManager.isWall(cellX, cellY)) {
-        pos = oldPos; // Si la celda es sólida, deshacemos el avance
+        pos = oldPos;
         
-        // Recalcular celdas con la posición restaurada por seguridad
         cellX = (int)(pos.x) / 64;
         cellY = (int)(pos.y) / 64;
     }
