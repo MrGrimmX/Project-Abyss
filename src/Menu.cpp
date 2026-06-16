@@ -52,6 +52,7 @@ controlsText.setString(
     "WASD - Mover\n"
     "Mouse / Flechas - Rotar\n"
     "Click Derecho - Disparo\n"
+    "1,2,3,4,5 - Cambio de Arma\n"
     "Space / Enter - Seleccionar\n"
     "ESC - Pausa / Salir\n"
 );
@@ -78,6 +79,7 @@ void Menu::handleInput(const sf::Event& event, GameState& state)
                 if (canMove) {
                     moveUp();
                     canMove = false;
+                    moveTimer = 0.f;
                 }
                 break;
 
@@ -85,6 +87,7 @@ void Menu::handleInput(const sf::Event& event, GameState& state)
                 if (canMove) {
                     moveDown();
                     canMove = false;
+                    moveTimer = 0.f;
                 }
                 break;
 
@@ -119,10 +122,16 @@ void Menu::handleInput(const sf::Event& event, GameState& state)
     }
 }
 
-void Menu::update(float deltaTime) {
+void Menu::update(float deltaTime)
+{
+    moveTimer += deltaTime;
+
+    if (moveTimer >= moveCooldown)
+        canMove = true;
+
     static float time = 0;
     time += deltaTime;
-    
+
     int alpha = 128 + (int)(127 * (1.0f + std::sin(time * 3)) / 2.0f);
     title.setFillColor(sf::Color(255, 255, 0, alpha));
 }

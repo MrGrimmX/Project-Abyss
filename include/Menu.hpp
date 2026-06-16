@@ -31,6 +31,8 @@ public:
     Menu();~Menu();
     bool showingControls = false;
     bool canMove = true;
+    float moveCooldown = 0.15f;
+    float moveTimer = 0.f;
     void handleInput(const sf::Event& event, GameState& state);
     void update(float deltaTime);
     void render(sf::RenderWindow& window);

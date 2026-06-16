@@ -1,5 +1,4 @@
 #include "Map.hpp"
-#include "EnemyManager.hpp"
 #include "Level.hpp"
 #include <iostream>
 #include <cmath>

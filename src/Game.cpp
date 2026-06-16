@@ -20,6 +20,15 @@ Game::Game() :
     
     textureManager.loadTextures("assets/texturas/CASTLEBRICKS.png");
 
+    if (!backgroundMusic.openFromFile("assets/Music/Martillo-Subterraneo.ogg"))
+    {
+        std::cout << "No se pudo cargar la musica\n";
+    }
+
+    backgroundMusic.setLoop(true);
+    backgroundMusic.setVolume(50.f); // volumen de 0 a 100
+    backgroundMusic.play();
+
     const float PI = 3.14159265f;
 
 while(player.angle < 0)

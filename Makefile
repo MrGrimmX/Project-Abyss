@@ -1,7 +1,7 @@
 # Variables globales
 CXX      = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -Iinclude
-LDFLAGS  = -lsfml-graphics -lsfml-window -lsfml-system
+LDFLAGS  = -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 # Carpetas del proyecto
 SRC_DIR = src

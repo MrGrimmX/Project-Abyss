@@ -2,13 +2,13 @@
 #define GAME_HPP
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <memory>
 #include "Player.hpp"
 #include "Map.hpp"
 #include "TextureManager.hpp"
 #include "Menu.hpp"
 #include "Enemy.hpp"
-#include "EnemyManager.hpp"
 
 class Game {
 private:
@@ -20,6 +20,7 @@ private:
     Menu menu;
     GameState gameState;
     sf::Font hudFont;
+    sf::Music backgroundMusic;
     std::vector<Enemy> enemies;
     sf::Vector2f findSpawnPosition();
     void spawnWave(int wave);
