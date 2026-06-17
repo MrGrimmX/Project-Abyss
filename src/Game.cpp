@@ -3,10 +3,6 @@
 #include <cmath>
 #include <algorithm>
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
-const int TILE_SIZE = 64;
-
 Game::Game() : 
     window(sf::VideoMode(SCREEN_WIDTH, SCREEN_HEIGHT), "Wolfenstein 3D Engine - CETI"),
     player(sf::Vector2f(96.0f, 96.0f)),
@@ -17,7 +13,6 @@ Game::Game() :
     player.pos = mapManager.getCurrentLevel()->spawnPoint;
     window.setMouseCursorVisible(false);
     window.setKeyRepeatEnabled(false);
-    
     textureManager.loadTextures("assets/texturas/CASTLEBRICKS.png");
 
     if (!backgroundMusic.openFromFile("assets/Music/Martillo-Subterraneo.ogg"))
@@ -28,26 +23,6 @@ Game::Game() :
     backgroundMusic.setLoop(true);
     backgroundMusic.setVolume(50.f); // volumen de 0 a 100
     backgroundMusic.play();
-
-    const float PI = 3.14159265f;
-
-while(player.angle < 0)
-    player.angle += 2.0f * PI;
-
-while(player.angle >= 2.0f * PI)
-    player.angle -= 2.0f * PI;
-
-enemies.clear();
-
-Enemy e1;
-e1.load(EnemyType::Grunt);
-e1.pos = sf::Vector2f(5 * 64 + 32, 5 * 64 + 32);
-enemies.push_back(e1);
-
-Enemy e2;
-e2.load(EnemyType::Grunt);
-e2.pos = sf::Vector2f(10 * 64 + 32, 10 * 64 + 32);
-enemies.push_back(e2);
 }
 
 Game::~Game() {}
@@ -157,10 +132,12 @@ else
 
 void Game::update(float deltaTime) {
     if (gameState == GAME_RUNNING) {
+        for(auto& enemy : enemies) {
+            enemy.update(deltaTime, player.pos, mapManager);
+        }
     player.update(deltaTime, mapManager);
-        player.update(deltaTime, mapManager);
-        player.getCurrentWeapon()->update(deltaTime);
-        sf::Vector2i center(
+    player.getCurrentWeapon()->update(deltaTime);
+    sf::Vector2i center(
     window.getSize().x / 2,
     window.getSize().y / 2
 );
@@ -262,7 +239,8 @@ void Game::renderRaycast() {
         
         float correctedDistance = distance * std::cos(rayAngle - player.angle);
         if (correctedDistance < 1.0f) correctedDistance = 1.0f;
-        
+        zBuffer[i] = correctedDistance;
+
         int wallHeight = (int)((TILE_SIZE * SCREEN_HEIGHT) / correctedDistance);
         int drawStart = (SCREEN_HEIGHT / 2) - (wallHeight / 2);
         int drawEnd = (SCREEN_HEIGHT / 2) + (wallHeight / 2);
