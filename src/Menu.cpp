@@ -14,7 +14,7 @@ Menu::Menu() : selectedItem(0), currentState(MENU_MAIN) {
     optionsList = {"VOLUMEN: 50%", "CONTROLES", "VOLVER"};
     
     title.setFont(font);
-    title.setString("The Abyss of Doom");
+    title.setString("Project Abyss");
     title.setCharacterSize(48);
     title.setFillColor(sf::Color::Yellow);
     title.setStyle(sf::Text::Bold);
